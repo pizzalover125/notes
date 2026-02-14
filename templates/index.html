@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minimalist Notes</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>NOTES GENERATOR</h1>
+
+      <form id="uploadForm">
+        <label for="pdfFile" class="custom-file-upload"> CHOOSE PDF </label>
+        <input type="file" id="pdfFile" name="file" accept=".pdf" required />
+        <button type="submit" id="generateBtn">GENERATE NOTES</button>
+      </form>
+
+      <div id="loading">
+        <div class="spinner"></div>
+        <p>GENERATING...</p>
+      </div>
+
+      <div id="results"></div>
+    </div>
+    <script src="/static/script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,156 @@
+body {
+  background-color: #000;
+  color: #fff;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.container {
+  text-align: center;
+  max-width: 800px;
+  width: 90%;
+  margin: 20px auto;
+}
+
+h1 {
+  font-size: 2em;
+  font-weight: 300;
+  letter-spacing: 5px;
+  margin-bottom: 40px;
+}
+
+input[type="file"] {
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  z-index: -1;
+}
+
+.custom-file-upload {
+  border: 1px solid #fff;
+  display: inline-block;
+  padding: 10px 20px;
+  cursor: pointer;
+  background: #000;
+  color: #fff;
+  margin: 10px;
+  transition: all 0.3s ease;
+}
+
+.custom-file-upload:hover {
+  background: #fff;
+  color: #000;
+}
+
+button {
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+  padding: 10px 20px;
+  cursor: pointer;
+  margin: 10px;
+  font-family: inherit;
+  font-size: 1em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background: #fff;
+  color: #000;
+}
+
+#loading {
+  display: none;
+  margin-top: 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #fff;
+  border-top: 4px solid #000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+#results {
+  margin-top: 40px;
+  text-align: left;
+  text-transform: none;
+  font-family: "Georgia", serif;
+  line-height: 1.6;
+  font-size: 1rem;
+  display: none;
+}
+
+#results h1,
+#results h2,
+#results h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  text-transform: uppercase;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.2em;
+}
+
+#results ul,
+#results ol {
+  padding-left: 20px;
+  margin-bottom: 1em;
+}
+
+#results li {
+  margin-bottom: 0.5em;
+}
+
+#results p {
+  margin-bottom: 1em;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.95em;
+}
+
+#results strong {
+  font-weight: 700;
+  color: #ddd;
+}
+
+#results table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.9em;
+}
+
+#results th,
+#results td {
+  border: 1px solid #fff;
+  padding: 12px;
+  text-align: left;
+}
+
+#results th {
+  background-color: #222;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
