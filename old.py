@@ -1,8 +1,9 @@
 import requests # type: ignore
+import os
 
 url = "https://ai.hackclub.com/proxy/v1/chat/completions"
 
-api_key = "sk-hc-v1-535600788f5e472cbb9c5ee65108ddfeb5d193e7ce7c4e7d9c16dd127a201eee"
+api_key = os.getenv("API_KEY")
 
 headers = {
     "Authorization": f"Bearer {api_key}",

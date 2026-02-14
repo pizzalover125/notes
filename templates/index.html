@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Minimalist Notes</title>
     <link rel="stylesheet" href="/static/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
@@ -22,7 +28,21 @@
         <p>GENERATING...</p>
       </div>
 
+      <div id="tabs" style="display: none">
+        <button class="tab-btn active" data-tab="notes">NOTES</button>
+        <button class="tab-btn" data-tab="flashcards">FLASHCARDS</button>
+      </div>
+
       <div id="results"></div>
+
+      <div id="flashcardsContainer" style="display: none">
+        <div id="flashcardDeck"></div>
+        <div id="flashcardNav">
+          <button id="prevCard">&#8592; PREV</button>
+          <span id="cardCounter"></span>
+          <button id="nextCard">NEXT &#8594;</button>
+        </div>
+      </div>
     </div>
     <script src="/static/script.js"></script>
   </body>
