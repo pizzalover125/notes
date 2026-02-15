@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Minimalist Notes</title>
+    <title>notes.</title>
     <link rel="stylesheet" href="/static/style.css" />
     <link
       rel="stylesheet"
@@ -14,8 +14,13 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
+    <div id="loading">
+      <div class="spinner"></div>
+      <p>GENERATING...</p>
+    </div>
+
     <div class="container">
-      <h1>NOTES GENERATOR</h1>
+      <h1>notes.</h1>
 
       <form id="uploadForm">
         <label for="pdfFile" class="custom-file-upload"> CHOOSE PDF </label>
@@ -23,14 +28,10 @@
         <button type="submit" id="generateBtn">GENERATE NOTES</button>
       </form>
 
-      <div id="loading">
-        <div class="spinner"></div>
-        <p>GENERATING...</p>
-      </div>
-
       <div id="tabs" style="display: none">
         <button class="tab-btn active" data-tab="notes">NOTES</button>
         <button class="tab-btn" data-tab="flashcards">FLASHCARDS</button>
+        <button class="tab-btn" data-tab="quiz">QUIZ</button>
       </div>
 
       <div id="results"></div>
@@ -42,6 +43,17 @@
           <span id="cardCounter"></span>
           <button id="nextCard">NEXT &#8594;</button>
         </div>
+      </div>
+
+      <div id="quizContainer" style="display: none">
+        <div id="quizScore">
+          <span id="scoreText">SCORE: 0 / 0</span>
+          <button id="nextQuestion" style="display: none">NEXT QUESTION</button>
+          <button id="generateMoreQuiz" style="display: none">
+            GENERATE MORE QUESTIONS
+          </button>
+        </div>
+        <div id="quizQuestions"></div>
       </div>
     </div>
     <script src="/static/script.js"></script>
