@@ -62,7 +62,7 @@ button {
   transition: all 0.3s ease;
 }
 
-button:hover {
+button:hover:not(.explain-btn) {
   background: #fff;
   color: #000;
 }
@@ -447,6 +447,14 @@ button:hover {
   color: #4caf50;
 }
 
+.correct-badge {
+  margin-left: auto;
+  font-size: 0.7em;
+  letter-spacing: 2px;
+  color: #4caf50;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
 .quiz-option.wrong {
   border-color: #f44336;
   background: rgba(244, 67, 54, 0.1);
@@ -460,4 +468,40 @@ button:hover {
 
 .quiz-option.wrong .option-text {
   color: #f44336;
+}
+
+.explain-btn {
+  margin-top: 15px;
+  margin-left: 0;
+  margin-right: auto;
+  display: block;
+  font-size: 0.75em;
+  padding: 8px 18px;
+  letter-spacing: 2px;
+  border: 1px solid #555;
+  color: #888;
+}
+
+.explain-btn:hover {
+  border-color: #fff;
+  color: #fff;
+  background: #000;
+}
+
+.ai-explanation {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #333;
+  text-transform: none;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.9em;
+  line-height: 1.7;
+}
+
+.ai-explanation p {
+  margin-bottom: 0.8em;
+}
+
+.ai-explanation strong {
+  color: #ddd;
 }

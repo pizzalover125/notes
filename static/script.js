@@ -305,12 +305,27 @@ function handleAnswer(selectedOpt, question) {
     const letter = opt.dataset.letter;
     if (letter === correctAnswer) {
       opt.classList.add("correct");
+      if (!isCorrect) {
+        const badge = document.createElement("span");
+        badge.className = "correct-badge";
+        badge.textContent = "CORRECT";
+        opt.appendChild(badge);
+      }
     } else if (letter === chosenLetter && !isCorrect) {
       opt.classList.add("wrong");
     }
   });
 
   updateScoreDisplay();
+
+  // Show explain button
+  const explainBtn = document.createElement("button");
+  explainBtn.className = "explain-btn";
+  explainBtn.textContent = "EXPLAIN WITH AI";
+  explainBtn.addEventListener("click", () =>
+    explainQuestion(question, chosenLetter, explainBtn),
+  );
+  selectedOpt.closest(".quiz-question").appendChild(explainBtn);
 
   // Show next or generate more
   if (currentQuizIndex < quizData.length - 1) {
@@ -338,3 +353,42 @@ document
     questionAnswered = false;
     await loadQuiz();
   });
+
+async function explainQuestion(question, chosen, btn) {
+  btn.disabled = true;
+  btn.textContent = "LOADING...";
+
+  try {
+    const response = await fetch("/explain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question: question.question,
+        options: question.options,
+        answer: question.answer,
+        chosen: chosen,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      alert(data.error);
+      btn.textContent = "EXPLAIN WITH AI";
+      btn.disabled = false;
+      return;
+    }
+
+    const explanationDiv = document.createElement("div");
+    explanationDiv.className = "ai-explanation";
+    explanationDiv.innerHTML = marked.parse(data.explanation);
+    btn.parentElement.appendChild(explanationDiv);
+    renderMath(explanationDiv);
+    btn.remove();
+  } catch (error) {
+    console.error("Error:", error);
+    alert("Failed to get explanation.");
+    btn.textContent = "EXPLAIN WITH AI";
+    btn.disabled = false;
+  }
+}

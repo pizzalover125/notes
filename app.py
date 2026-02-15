@@ -242,5 +242,51 @@ def generate_quiz():
 
     return jsonify({'error': 'Invalid file type. Please upload a PDF.'}), 400
 
+@app.route('/explain', methods=['POST'])
+def explain_question():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    question = data.get('question', '')
+    options = data.get('options', {})
+    answer = data.get('answer', '')
+    chosen = data.get('chosen', '')
+
+    options_text = '\n'.join(f"{k}. {v}" for k, v in options.items())
+
+    try:
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "model": "google/gemini-2.5-flash",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        "You are a helpful tutor. A student just answered a quiz question. "
+                        "Explain why the correct answer is correct and, if the student chose wrong, "
+                        "why their choice was incorrect. Be concise but clear. Use Markdown formatting.\n\n"
+                        f"Question: {question}\n\n"
+                        f"Options:\n{options_text}\n\n"
+                        f"Correct answer: {answer}\n"
+                        f"Student chose: {chosen}"
+                    ),
+                }
+            ],
+        }
+
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+
+        explanation = response.json()["choices"][0]["message"]["content"]
+        return jsonify({'explanation': explanation})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=8080)
