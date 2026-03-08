@@ -5,6 +5,194 @@ let quizData = [];
 let quizScore = { correct: 0, total: 0 };
 let currentQuizIndex = 0;
 let questionAnswered = false;
+let chatHistory = [];
+let notesContent = "";
+let selectedModel = "google/gemini-3-flash-preview";
+
+const COLOR_SCHEMES = [
+  {
+    name: "Midnight",
+    bg: "#000000",
+    fg: "#ffffff",
+    accent: "#333333",
+    muted: "#888888",
+    highlight: "#e8a735",
+  },
+  {
+    name: "Slate",
+    bg: "#1a1a2e",
+    fg: "#e0e0e0",
+    accent: "#16213e",
+    muted: "#7f8c8d",
+    highlight: "#5b8fb9",
+  },
+  {
+    name: "Forest",
+    bg: "#0a1a0a",
+    fg: "#c8e6c9",
+    accent: "#1b3a1b",
+    muted: "#6b8f6b",
+    highlight: "#4caf50",
+  },
+  {
+    name: "Ocean",
+    bg: "#0a0f1a",
+    fg: "#b3d9ff",
+    accent: "#112240",
+    muted: "#5a87b0",
+    highlight: "#2196f3",
+  },
+  {
+    name: "Ember",
+    bg: "#1a0a0a",
+    fg: "#ffccbc",
+    accent: "#3e1616",
+    muted: "#b06050",
+    highlight: "#e65100",
+  },
+  {
+    name: "Violet",
+    bg: "#12061f",
+    fg: "#d1c4e9",
+    accent: "#1f0a33",
+    muted: "#8068a0",
+    highlight: "#9c27b0",
+  },
+  {
+    name: "Sand",
+    bg: "#1a1710",
+    fg: "#e8dcc8",
+    accent: "#2e2818",
+    muted: "#9a8a6a",
+    highlight: "#c9a84c",
+  },
+  {
+    name: "Frost",
+    bg: "#f0f0f0",
+    fg: "#111111",
+    accent: "#d0d0d0",
+    muted: "#777777",
+    highlight: "#f5c842",
+  },
+];
+
+function getSelectedModel() {
+  return (
+    localStorage.getItem("selectedModel") || "google/gemini-3-flash-preview"
+  );
+}
+
+function applyColorScheme(scheme) {
+  document.documentElement.style.setProperty("--bg", scheme.bg);
+  document.documentElement.style.setProperty("--fg", scheme.fg);
+  document.documentElement.style.setProperty("--accent", scheme.accent);
+  document.documentElement.style.setProperty("--muted", scheme.muted);
+  document.documentElement.style.setProperty("--highlight", scheme.highlight);
+  localStorage.setItem("colorScheme", scheme.name);
+  const fav = document.getElementById("favicon");
+  if (fav) {
+    const color = scheme.highlight.replace("#", "%23");
+    fav.href = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='2' fill='${color}'/></svg>`;
+  }
+}
+
+function initSettings() {
+  selectedModel = getSelectedModel();
+
+  const savedScheme = localStorage.getItem("colorScheme");
+  const scheme =
+    COLOR_SCHEMES.find((s) => s.name === savedScheme) || COLOR_SCHEMES[0];
+  applyColorScheme(scheme);
+
+  const grid = document.getElementById("colorSchemeOptions");
+  COLOR_SCHEMES.forEach((s) => {
+    const swatch = document.createElement("button");
+    swatch.className =
+      "color-swatch" + (s.name === scheme.name ? " active" : "");
+    swatch.title = s.name;
+    swatch.style.background = s.bg;
+    swatch.style.border = `2px solid ${s.fg}`;
+    swatch.innerHTML = `<span style="color:${s.fg}">${s.name}</span>`;
+    swatch.addEventListener("click", () => {
+      applyColorScheme(s);
+      grid
+        .querySelectorAll(".color-swatch")
+        .forEach((el) => el.classList.remove("active"));
+      swatch.classList.add("active");
+    });
+    grid.appendChild(swatch);
+  });
+
+  fetch("/models")
+    .then((r) => r.json())
+    .then((data) => {
+      const select = document.getElementById("modelSelect");
+      data.models.forEach((m) => {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = m.name;
+        if (m.id === selectedModel) opt.selected = true;
+        select.appendChild(opt);
+      });
+    })
+    .catch(() => {
+      const select = document.getElementById("modelSelect");
+      const opt = document.createElement("option");
+      opt.value = "google/gemini-2.5-flash";
+      opt.textContent = "Gemini 2.5 Flash";
+      opt.selected = true;
+      select.appendChild(opt);
+    });
+
+  document.getElementById("modelSelect").addEventListener("change", (e) => {
+    selectedModel = e.target.value;
+    localStorage.setItem("selectedModel", selectedModel);
+  });
+
+  document.getElementById("settingsToggle").addEventListener("click", () => {
+    const panel = document.getElementById("settingsPanel");
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+  });
+
+  document.getElementById("settingsClose").addEventListener("click", () => {
+    document.getElementById("settingsPanel").style.display = "none";
+  });
+}
+
+initSettings();
+
+const dropZone = document.getElementById("dropZone");
+const pdfInput = document.getElementById("pdfFile");
+
+dropZone.addEventListener("click", () => pdfInput.click());
+
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("drag-over");
+});
+
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("drag-over");
+});
+
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === "application/pdf") {
+    pdfInput.files = e.dataTransfer.files;
+    dropZone.querySelector(".drop-zone-text").textContent = file.name;
+    dropZone.classList.add("has-file");
+  }
+});
+
+pdfInput.addEventListener("change", () => {
+  if (pdfInput.files.length) {
+    dropZone.querySelector(".drop-zone-text").textContent =
+      pdfInput.files[0].name;
+    dropZone.classList.add("has-file");
+  }
+});
 
 function renderMath(el) {
   if (typeof renderMathInElement === "function") {
@@ -29,7 +217,7 @@ document
     document.getElementById("flashcardsContainer").style.display = "none";
     document.getElementById("quizContainer").style.display = "none";
     document.getElementById("tabs").style.display = "none";
-    document.getElementById("loading").style.display = "flex";
+    showLoadingScreen();
     document.getElementById("generateBtn").disabled = true;
 
     const fileInput = document.getElementById("pdfFile");
@@ -44,9 +232,10 @@ document
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("model", selectedModel);
 
     try {
-      const response = await fetch("/upload", {
+      const response = await fetch("/generate-all", {
         method: "POST",
         body: formData,
       });
@@ -56,10 +245,28 @@ document
       if (data.error) {
         alert(data.error);
       } else {
-        const resultsDiv = document.getElementById("results");
-        resultsDiv.innerHTML = marked.parse(data.notes);
-        renderMath(resultsDiv);
-        resultsDiv.style.display = "block";
+        if (data.notes) {
+          const resultsDiv = document.getElementById("results");
+          resultsDiv.innerHTML = marked.parse(data.notes);
+          renderMath(resultsDiv);
+          resultsDiv.style.display = "block";
+          notesContent = data.notes;
+        }
+
+        if (data.flashcards) {
+          flashcardsData = data.flashcards;
+          currentCardIndex = 0;
+          renderFlashcard();
+        }
+
+        if (data.quiz) {
+          quizData = data.quiz;
+          currentQuizIndex = 0;
+          questionAnswered = false;
+          quizScore = { correct: 0, total: 0 };
+          renderCurrentQuestion();
+        }
+
         document.getElementById("tabs").style.display = "flex";
         document.getElementById("uploadForm").style.display = "none";
         setActiveTab("notes");
@@ -68,22 +275,14 @@ document
       console.error("Error:", error);
       alert("An error occurred during text generation.");
     } finally {
-      document.getElementById("loading").style.display = "none";
+      onAiFinished();
       document.getElementById("generateBtn").disabled = false;
     }
   });
 
 document.querySelectorAll(".tab-btn").forEach((btn) => {
-  btn.addEventListener("click", async function () {
-    const tab = this.dataset.tab;
-    setActiveTab(tab);
-
-    if (tab === "flashcards" && flashcardsData.length === 0) {
-      await loadFlashcards();
-    }
-    if (tab === "quiz" && quizData.length === 0) {
-      await loadQuiz();
-    }
+  btn.addEventListener("click", function () {
+    setActiveTab(this.dataset.tab);
   });
 });
 
@@ -97,16 +296,23 @@ function setActiveTab(tab) {
     document.getElementById("results").style.display = "block";
     document.getElementById("flashcardsContainer").style.display = "none";
     document.getElementById("quizContainer").style.display = "none";
+    document.getElementById("chatContainer").style.display = "none";
   } else if (tab === "flashcards") {
     document.getElementById("results").style.display = "none";
-    document.getElementById("flashcardsContainer").style.display =
-      flashcardsData.length > 0 ? "block" : "none";
+    document.getElementById("flashcardsContainer").style.display = "block";
     document.getElementById("quizContainer").style.display = "none";
+    document.getElementById("chatContainer").style.display = "none";
   } else if (tab === "quiz") {
     document.getElementById("results").style.display = "none";
     document.getElementById("flashcardsContainer").style.display = "none";
-    document.getElementById("quizContainer").style.display =
-      quizData.length > 0 ? "block" : "none";
+    document.getElementById("quizContainer").style.display = "block";
+    document.getElementById("chatContainer").style.display = "none";
+  } else if (tab === "chat") {
+    document.getElementById("results").style.display = "none";
+    document.getElementById("flashcardsContainer").style.display = "none";
+    document.getElementById("quizContainer").style.display = "none";
+    document.getElementById("chatContainer").style.display = "flex";
+    document.getElementById("chatInput").focus();
   }
 }
 
@@ -114,10 +320,11 @@ async function loadFlashcards() {
   if (!currentFile) return;
 
   document.getElementById("flashcardsContainer").style.display = "none";
-  document.getElementById("loading").style.display = "flex";
+  showLoadingScreen();
 
   const formData = new FormData();
   formData.append("file", currentFile);
+  formData.append("model", selectedModel);
 
   try {
     const response = await fetch("/flashcards", {
@@ -139,7 +346,7 @@ async function loadFlashcards() {
     console.error("Error:", error);
     alert("An error occurred generating flashcards.");
   } finally {
-    document.getElementById("loading").style.display = "none";
+    onAiFinished();
   }
 }
 
@@ -202,20 +409,24 @@ if (inputElement) {
     quizScore = { correct: 0, total: 0 };
     currentQuizIndex = 0;
     questionAnswered = false;
+    chatHistory = [];
+    notesContent = "";
+    const chatMessages = document.getElementById("chatMessages");
+    if (chatMessages) chatMessages.innerHTML = "";
   });
 } else {
   console.error("File input element not found");
 }
 
-// Quiz logic
 async function loadQuiz() {
   if (!currentFile) return;
 
   document.getElementById("quizContainer").style.display = "none";
-  document.getElementById("loading").style.display = "flex";
+  showLoadingScreen();
 
   const formData = new FormData();
   formData.append("file", currentFile);
+  formData.append("model", selectedModel);
 
   try {
     const response = await fetch("/quiz", {
@@ -238,7 +449,7 @@ async function loadQuiz() {
     console.error("Error:", error);
     alert("An error occurred generating the quiz.");
   } finally {
-    document.getElementById("loading").style.display = "none";
+    onAiFinished();
   }
 }
 
@@ -278,13 +489,10 @@ function renderCurrentQuestion() {
   container.appendChild(qDiv);
   renderMath(container);
 
-  // Attach click handlers to options
   qDiv.querySelectorAll(".quiz-option").forEach((opt) => {
     opt.addEventListener("click", () => handleAnswer(opt, q));
   });
 
-  document.getElementById("nextQuestion").style.display = "none";
-  document.getElementById("generateMoreQuiz").style.display = "none";
   updateScoreDisplay();
 }
 
@@ -318,41 +526,46 @@ function handleAnswer(selectedOpt, question) {
 
   updateScoreDisplay();
 
-  // Show explain button
+  const quizActions = document.createElement("div");
+  quizActions.className = "quiz-actions";
+
   const explainBtn = document.createElement("button");
   explainBtn.className = "explain-btn";
   explainBtn.textContent = "EXPLAIN WITH AI";
   explainBtn.addEventListener("click", () =>
     explainQuestion(question, chosenLetter, explainBtn),
   );
-  selectedOpt.closest(".quiz-question").appendChild(explainBtn);
+  quizActions.appendChild(explainBtn);
 
-  // Show next or generate more
   if (currentQuizIndex < quizData.length - 1) {
-    document.getElementById("nextQuestion").style.display = "inline-block";
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "explain-btn";
+    nextBtn.textContent = "NEXT QUESTION";
+    nextBtn.addEventListener("click", () => {
+      currentQuizIndex++;
+      renderCurrentQuestion();
+    });
+    quizActions.appendChild(nextBtn);
   } else {
-    document.getElementById("generateMoreQuiz").style.display = "inline-block";
+    const moreBtn = document.createElement("button");
+    moreBtn.className = "explain-btn";
+    moreBtn.textContent = "GENERATE MORE QUESTIONS";
+    moreBtn.addEventListener("click", async () => {
+      quizData = [];
+      currentQuizIndex = 0;
+      questionAnswered = false;
+      await loadQuiz();
+    });
+    quizActions.appendChild(moreBtn);
   }
+
+  selectedOpt.closest(".quiz-question").appendChild(quizActions);
 }
 
 function updateScoreDisplay() {
   document.getElementById("scoreText").textContent =
     `SCORE: ${quizScore.correct} / ${quizScore.total}`;
 }
-
-document.getElementById("nextQuestion").addEventListener("click", () => {
-  currentQuizIndex++;
-  renderCurrentQuestion();
-});
-
-document
-  .getElementById("generateMoreQuiz")
-  .addEventListener("click", async () => {
-    quizData = [];
-    currentQuizIndex = 0;
-    questionAnswered = false;
-    await loadQuiz();
-  });
 
 async function explainQuestion(question, chosen, btn) {
   btn.disabled = true;
@@ -367,6 +580,7 @@ async function explainQuestion(question, chosen, btn) {
         options: question.options,
         answer: question.answer,
         chosen: chosen,
+        model: selectedModel,
       }),
     });
 
@@ -392,3 +606,342 @@ async function explainQuestion(question, chosen, btn) {
     btn.disabled = false;
   }
 }
+
+document
+  .getElementById("chatForm")
+  .addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const input = document.getElementById("chatInput");
+    const message = input.value.trim();
+    if (!message) return;
+
+    input.value = "";
+    appendChatMessage("user", message);
+    chatHistory.push({ role: "user", content: message });
+
+    const typingEl = appendChatMessage("assistant", "...");
+    typingEl.classList.add("chat-typing");
+
+    try {
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: message,
+          notes: notesContent,
+          history: chatHistory,
+        }),
+      });
+
+      const data = await response.json();
+
+      typingEl.remove();
+
+      if (data.error) {
+        appendChatMessage(
+          "assistant",
+          "Sorry, something went wrong: " + data.error,
+        );
+      } else {
+        const replyEl = appendChatMessage("assistant", data.reply, true);
+        chatHistory.push({ role: "assistant", content: data.reply });
+        renderMath(replyEl);
+      }
+    } catch (error) {
+      typingEl.remove();
+      appendChatMessage(
+        "assistant",
+        "Failed to get a response. Please try again.",
+      );
+      console.error("Chat error:", error);
+    }
+  });
+
+function appendChatMessage(role, content, parseMarkdown = false) {
+  const messagesDiv = document.getElementById("chatMessages");
+  const msgEl = document.createElement("div");
+  msgEl.className = `chat-message chat-${role}`;
+
+  if (parseMarkdown) {
+    msgEl.innerHTML = marked.parse(content);
+  } else {
+    msgEl.textContent = content;
+  }
+
+  messagesDiv.appendChild(msgEl);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  return msgEl;
+}
+
+let snakeInterval = null;
+let snakeRunning = false;
+let aiFinished = false;
+
+function initSnakeGame() {
+  const canvas = document.getElementById("snakeCanvas");
+  const ctx = canvas.getContext("2d");
+  const gridSize = 15;
+  const tileCount = canvas.width / gridSize;
+
+  let snake = [{ x: 10, y: 10 }];
+  let food = { x: 5, y: 5 };
+  let dx = 0;
+  let dy = 0;
+  let score = 0;
+  let gameOver = false;
+
+  function placeFood() {
+    food.x = Math.floor(Math.random() * tileCount);
+    food.y = Math.floor(Math.random() * tileCount);
+    for (const seg of snake) {
+      if (seg.x === food.x && seg.y === food.y) {
+        placeFood();
+        return;
+      }
+    }
+  }
+
+  function draw() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = getComputedStyle(document.documentElement)
+      .getPropertyValue("--highlight")
+      .trim();
+    ctx.beginPath();
+    ctx.arc(
+      food.x * gridSize + gridSize / 2,
+      food.y * gridSize + gridSize / 2,
+      gridSize / 2 - 1,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+
+    snake.forEach((seg, i) => {
+      ctx.fillStyle = i === 0 ? "#ffffff" : "rgba(255, 255, 255, 0.7)";
+      ctx.roundRect
+        ? (ctx.beginPath(),
+          ctx.roundRect(
+            seg.x * gridSize + 1,
+            seg.y * gridSize + 1,
+            gridSize - 2,
+            gridSize - 2,
+            3,
+          ),
+          ctx.fill())
+        : ctx.fillRect(
+            seg.x * gridSize + 1,
+            seg.y * gridSize + 1,
+            gridSize - 2,
+            gridSize - 2,
+          );
+    });
+
+    if (gameOver) {
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "24px Caveat, Patrick Hand, cursive";
+      ctx.textAlign = "center";
+      ctx.fillText("game over!", canvas.width / 2, canvas.height / 2 - 10);
+      ctx.font = "18px Caveat, Patrick Hand, cursive";
+      ctx.fillText("tap to restart", canvas.width / 2, canvas.height / 2 + 20);
+    }
+  }
+
+  function update() {
+    if (gameOver || (dx === 0 && dy === 0)) {
+      draw();
+      return;
+    }
+
+    const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+    if (head.x < 0) head.x = tileCount - 1;
+    if (head.x >= tileCount) head.x = 0;
+    if (head.y < 0) head.y = tileCount - 1;
+    if (head.y >= tileCount) head.y = 0;
+
+    for (const seg of snake) {
+      if (seg.x === head.x && seg.y === head.y) {
+        gameOver = true;
+        draw();
+        return;
+      }
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      document.getElementById("snakeScore").textContent = `score: ${score}`;
+      placeFood();
+    } else {
+      snake.pop();
+    }
+
+    draw();
+  }
+
+  function setDirection(dir) {
+    if (gameOver) {
+      snake = [{ x: 10, y: 10 }];
+      dx = 0;
+      dy = 0;
+      score = 0;
+      gameOver = false;
+      document.getElementById("snakeScore").textContent = "score: 0";
+      placeFood();
+      return;
+    }
+    switch (dir) {
+      case "up":
+        if (dy !== 1) {
+          dx = 0;
+          dy = -1;
+        }
+        break;
+      case "down":
+        if (dy !== -1) {
+          dx = 0;
+          dy = 1;
+        }
+        break;
+      case "left":
+        if (dx !== 1) {
+          dx = -1;
+          dy = 0;
+        }
+        break;
+      case "right":
+        if (dx !== -1) {
+          dx = 1;
+          dy = 0;
+        }
+        break;
+    }
+  }
+
+  function onKey(e) {
+    const map = {
+      ArrowUp: "up",
+      ArrowDown: "down",
+      ArrowLeft: "left",
+      ArrowRight: "right",
+      w: "up",
+      s: "down",
+      a: "left",
+      d: "right",
+    };
+    if (map[e.key]) {
+      e.preventDefault();
+      setDirection(map[e.key]);
+    }
+  }
+
+  canvas.addEventListener("click", () => {
+    if (gameOver) {
+      setDirection("right");
+    }
+  });
+
+  document.addEventListener("keydown", onKey);
+  placeFood();
+  draw();
+
+  snakeInterval = setInterval(update, 110);
+  snakeRunning = true;
+
+  return function cleanup() {
+    clearInterval(snakeInterval);
+    snakeInterval = null;
+    snakeRunning = false;
+    document.removeEventListener("keydown", onKey);
+  };
+}
+
+let cleanupSnake = null;
+
+document.getElementById("playSnakeBtn").addEventListener("click", () => {
+  document.getElementById("loadingDefault").style.display = "none";
+  const snakeGame = document.getElementById("snakeGame");
+  snakeGame.style.display = "flex";
+  cleanupSnake = initSnakeGame();
+
+  if (aiFinished) {
+    document.getElementById("seeNotesBtn").style.display = "inline-block";
+  }
+});
+
+document.getElementById("seeNotesBtn").addEventListener("click", () => {
+  hideLoadingScreen();
+});
+
+let loadingTimerInterval = null;
+let loadingStartTime = null;
+
+function updateLoadingTimer() {
+  const elapsed = Math.floor((Date.now() - loadingStartTime) / 1000);
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const timeStr = mins + ":" + String(secs).padStart(2, "0");
+  document.getElementById("loadingTimer").textContent = timeStr;
+  document.getElementById("snakeTimer").textContent = timeStr;
+}
+
+function showLoadingScreen() {
+  aiFinished = false;
+  document.getElementById("loadingDefault").style.display = "flex";
+  document.getElementById("loadingDefault").style.flexDirection = "column";
+  document.getElementById("loadingDefault").style.alignItems = "center";
+  document.getElementById("snakeGame").style.display = "none";
+  document.getElementById("seeNotesBtn").style.display = "none";
+  document.getElementById("loading").style.display = "flex";
+
+  loadingStartTime = Date.now();
+  updateLoadingTimer();
+  loadingTimerInterval = setInterval(updateLoadingTimer, 1000);
+
+  if (cleanupSnake) {
+    cleanupSnake();
+    cleanupSnake = null;
+  }
+}
+
+function hideLoadingScreen() {
+  document.getElementById("loading").style.display = "none";
+  if (loadingTimerInterval) {
+    clearInterval(loadingTimerInterval);
+    loadingTimerInterval = null;
+  }
+  if (cleanupSnake) {
+    cleanupSnake();
+    cleanupSnake = null;
+  }
+}
+
+function onAiFinished() {
+  aiFinished = true;
+  if (snakeRunning) {
+    document.getElementById("seeNotesBtn").style.display = "inline-block";
+  } else {
+    hideLoadingScreen();
+  }
+}
+
+document.getElementById("exportFlashcardsCsv").addEventListener("click", () => {
+  if (flashcardsData.length === 0) return;
+  const escape = (str) => '"' + String(str).replace(/"/g, '""') + '"';
+  const rows = [];
+  flashcardsData.forEach((card) => {
+    rows.push(escape(card.front) + "," + escape(card.back));
+  });
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "flashcards.csv";
+  link.click();
+  URL.revokeObjectURL(link.href);
+});

@@ -1,13 +1,20 @@
+:root {
+  --bg: #2c2c2c;
+  --fg: #faf9f6;
+  --accent: #3e3b37;
+  --muted: #888888;
+  --highlight: #e8a735;
+}
+
 body {
-  background-color: #000;
-  color: #fff;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: "Caveat", "Patrick Hand", cursive;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   margin: 0;
-  text-transform: uppercase;
 }
 
 .container {
@@ -18,9 +25,9 @@ body {
 }
 
 h1 {
-  font-size: 2em;
-  font-weight: 300;
-  letter-spacing: 5px;
+  font-size: 2.8em;
+  font-weight: 700;
+  letter-spacing: 1px;
   margin-bottom: 40px;
 }
 
@@ -33,38 +40,87 @@ input[type="file"] {
   z-index: -1;
 }
 
-.custom-file-upload {
-  border: 1px solid #fff;
-  display: inline-block;
-  padding: 10px 20px;
+.drop-zone {
+  border: 2px dashed var(--muted);
+  border-radius: 12px;
+  padding: 48px 24px;
   cursor: pointer;
-  background: #000;
-  color: #fff;
-  margin: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   transition: all 0.3s ease;
+  background: transparent;
 }
 
-.custom-file-upload:hover {
-  background: #fff;
-  color: #000;
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--fg);
+  background: var(--accent);
+}
+
+.drop-zone-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  transition: color 0.3s ease;
+}
+
+.drop-zone:hover .drop-zone-icon,
+.drop-zone.drag-over .drop-zone-icon {
+  color: var(--fg);
+}
+
+.drop-zone-text {
+  font-size: 1.3em;
+  color: var(--fg);
+  margin: 0 0 4px;
+}
+
+.drop-zone-hint {
+  font-size: 1em;
+  color: var(--muted);
+  margin: 0;
+}
+
+.drop-zone.has-file {
+  border-color: var(--highlight);
+}
+
+.drop-zone.has-file .drop-zone-text {
+  color: var(--highlight);
+}
+
+#uploadForm {
+  display: flex;
+  flex-direction: column;
+}
+
+#generateBtn {
+  width: 100%;
+  margin: 12px 0 0;
+  box-sizing: border-box;
+  background: var(--accent);
+  border-color: var(--muted);
 }
 
 button {
-  background: #000;
-  color: #fff;
-  border: 1px solid #fff;
-  padding: 10px 20px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 24px;
   cursor: pointer;
   margin: 10px;
   font-family: inherit;
-  font-size: 1em;
-  text-transform: uppercase;
+  font-size: 1.1em;
   transition: all 0.3s ease;
 }
 
 button:hover:not(.explain-btn) {
-  background: #fff;
-  color: #000;
+  background: var(--accent);
+  border-color: var(--muted);
 }
 
 #loading {
@@ -75,27 +131,117 @@ button:hover:not(.explain-btn) {
   width: 100%;
   height: 100%;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 20px;
 }
 
 #loading p {
-  letter-spacing: 4px;
-  font-size: 0.9em;
+  letter-spacing: 2px;
+  font-size: 1.4em;
+  color: #ffffff;
+}
+
+#loadingTimer {
+  font-size: 1.1em;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #fff;
-  border-top: 4px solid #000;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid #ffffff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 10px;
+}
+
+#playSnakeBtn {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 10px 22px;
+  cursor: pointer;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+#playSnakeBtn:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#snakeGame {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+#snakeGame canvas {
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+#snakeScore {
+  color: rgba(255, 255, 255, 0.6);
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
+  letter-spacing: 1px;
+}
+
+#snakeHeader {
+  display: flex;
+  justify-content: space-between;
+  width: 300px;
+}
+
+#snakeTimer {
+  color: rgba(255, 255, 255, 0.4);
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
+  letter-spacing: 1px;
+}
+
+#seeNotesBtn {
+  background: #ffffff;
+  color: #111111;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  cursor: pointer;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.3em;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  animation: pulseBtn 2s ease-in-out infinite;
+  margin: 0;
+}
+
+#seeNotesBtn:hover {
+  transform: scale(1.05);
+  background: #f0f0f0;
+}
+
+@keyframes pulseBtn {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+  }
 }
 
 @keyframes spin {
@@ -110,10 +256,9 @@ button:hover:not(.explain-btn) {
 #results {
   margin-top: 40px;
   text-align: left;
-  text-transform: none;
-  font-family: "Georgia", serif;
-  line-height: 1.6;
-  font-size: 1rem;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  line-height: 1.8;
+  font-size: 1.15rem;
   display: none;
 }
 
@@ -122,11 +267,25 @@ button:hover:not(.explain-btn) {
 #results h3 {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
-  text-transform: uppercase;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  letter-spacing: 1px;
-  border-bottom: 1px solid #333;
-  padding-bottom: 0.2em;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-bottom: none;
+  padding-bottom: 0;
+  display: inline;
+  background-image: linear-gradient(var(--highlight), var(--highlight));
+  background-size: 100% 30%;
+  background-repeat: no-repeat;
+  background-position: left 90%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+#results h1::after,
+#results h2::after,
+#results h3::after {
+  content: "";
+  display: block;
 }
 
 #results ul,
@@ -141,71 +300,86 @@ button:hover:not(.explain-btn) {
 
 #results p {
   margin-bottom: 1em;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 0.95em;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
 }
 
 #results strong {
   font-weight: 700;
-  color: #ddd;
+  color: var(--fg);
 }
 
 #results table {
   width: 100%;
   border-collapse: collapse;
   margin: 20px 0;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 0.9em;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1em;
 }
 
 #results th,
 #results td {
-  border: 1px solid #fff;
+  border: 1px solid var(--accent);
   padding: 12px;
   text-align: left;
 }
 
 #results th {
-  background-color: #222;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  background-color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
-/* Tabs */
+.export-btn {
+  display: block;
+  margin: 20px auto 0;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1em;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+}
+
+.export-btn:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
 #tabs {
   display: none;
   justify-content: center;
-  gap: 0;
+  gap: 24px;
   margin-top: 30px;
-  border-bottom: 1px solid #333;
 }
 
 .tab-btn {
   background: transparent;
-  color: #666;
+  color: var(--muted);
   border: none;
-  border-bottom: 2px solid transparent;
-  padding: 10px 30px;
+  padding: 0;
   cursor: pointer;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 0.85em;
-  letter-spacing: 3px;
-  transition: all 0.3s ease;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
+  letter-spacing: 1px;
+  transition: color 0.3s ease;
   margin: 0;
 }
 
 .tab-btn:hover {
-  color: #fff;
+  color: var(--fg);
   background: transparent;
 }
 
 .tab-btn.active {
-  color: #fff;
-  border-bottom: 2px solid #fff;
+  color: var(--fg);
   background: transparent;
 }
 
-/* Flashcards */
 #flashcardsContainer {
   margin-top: 40px;
   display: flex;
@@ -251,27 +425,29 @@ button:hover:not(.explain-btn) {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border: 1px solid #fff;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
   padding: 30px;
   box-sizing: border-box;
   text-align: center;
 }
 
 .flashcard-front {
-  background: #000;
+  background: var(--bg);
+  border-radius: 12px;
 }
 
 .flashcard-back {
-  background: #111;
+  background: var(--accent);
   transform: rotateY(180deg);
+  border-radius: 12px;
 }
 
 .flashcard-front p,
 .flashcard-back p {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 1.05em;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.25em;
   line-height: 1.6;
-  text-transform: none;
   margin: 0;
 }
 
@@ -280,7 +456,7 @@ button:hover:not(.explain-btn) {
   bottom: 12px;
   font-size: 0.65em;
   letter-spacing: 2px;
-  color: #555;
+  color: var(--muted);
 }
 
 #flashcardNav {
@@ -304,13 +480,12 @@ button:hover:not(.explain-btn) {
 }
 
 #cardCounter {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 0.85em;
-  letter-spacing: 3px;
-  color: #888;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
+  letter-spacing: 1px;
+  color: var(--muted);
 }
 
-/* Quiz */
 #quizContainer {
   margin-top: 40px;
   text-align: left;
@@ -325,7 +500,8 @@ button:hover:not(.explain-btn) {
   gap: 20px;
   margin-bottom: 30px;
   padding: 0 15px;
-  border: 1px solid #333;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
   height: 50px;
 }
 
@@ -337,10 +513,9 @@ button:hover:not(.explain-btn) {
 }
 
 #scoreText {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 1.1em;
-  letter-spacing: 4px;
-  text-transform: uppercase;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.3em;
+  letter-spacing: 1px;
 }
 
 .quiz-question {
@@ -353,22 +528,22 @@ button:hover:not(.explain-btn) {
 }
 
 .quiz-question-counter {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 0.75em;
-  letter-spacing: 3px;
-  color: #555;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1em;
+  letter-spacing: 1px;
+  color: var(--muted);
   margin-bottom: 10px;
 }
 
 .quiz-question-text {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 1.1em;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.25em;
   line-height: 1.6;
   margin-bottom: 20px;
 }
 
 .q-num {
-  color: #888;
+  color: var(--muted);
   margin-right: 5px;
 }
 
@@ -383,15 +558,16 @@ button:hover:not(.explain-btn) {
   align-items: center;
   gap: 12px;
   padding: 12px 15px;
-  border: 1px solid #333;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 0.9em;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
 }
 
 .quiz-option:hover:not(.disabled) {
-  border-color: #fff;
+  border-color: var(--fg);
 }
 
 .quiz-option.disabled {
@@ -404,12 +580,12 @@ button:hover:not(.explain-btn) {
 }
 
 .quiz-option input[type="radio"]:checked ~ .option-letter {
-  background: #fff;
-  color: #000;
+  background: var(--fg);
+  color: var(--bg);
 }
 
 .quiz-option input[type="radio"]:checked ~ .option-text {
-  color: #fff;
+  color: var(--fg);
 }
 
 .option-letter {
@@ -418,16 +594,16 @@ button:hover:not(.explain-btn) {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid #fff;
-  font-size: 0.8em;
-  letter-spacing: 1px;
+  border: 2px solid var(--fg);
+  border-radius: 50%;
+  font-size: 0.9em;
+  letter-spacing: 0;
   flex-shrink: 0;
-  text-transform: uppercase;
   transition: all 0.2s ease;
 }
 
 .option-text {
-  color: #aaa;
+  color: var(--muted);
   line-height: 1.5;
   transition: color 0.2s ease;
 }
@@ -440,7 +616,7 @@ button:hover:not(.explain-btn) {
 .quiz-option.correct .option-letter {
   background: #4caf50;
   border-color: #4caf50;
-  color: #000;
+  color: var(--bg);
 }
 
 .quiz-option.correct .option-text {
@@ -449,10 +625,10 @@ button:hover:not(.explain-btn) {
 
 .correct-badge {
   margin-left: auto;
-  font-size: 0.7em;
-  letter-spacing: 2px;
+  font-size: 0.9em;
+  letter-spacing: 1px;
   color: #4caf50;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: "Caveat", "Patrick Hand", cursive;
 }
 
 .quiz-option.wrong {
@@ -463,38 +639,43 @@ button:hover:not(.explain-btn) {
 .quiz-option.wrong .option-letter {
   background: #f44336;
   border-color: #f44336;
-  color: #000;
+  color: var(--bg);
 }
 
 .quiz-option.wrong .option-text {
   color: #f44336;
 }
 
-.explain-btn {
+.quiz-actions {
+  display: flex;
+  gap: 10px;
   margin-top: 15px;
-  margin-left: 0;
-  margin-right: auto;
-  display: block;
-  font-size: 0.75em;
+}
+
+.explain-btn {
+  margin: 0;
+  display: inline-block;
+  font-size: 0.95em;
   padding: 8px 18px;
-  letter-spacing: 2px;
-  border: 1px solid #555;
-  color: #888;
+  letter-spacing: 1px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  color: var(--muted);
 }
 
 .explain-btn:hover {
-  border-color: #fff;
-  color: #fff;
-  background: #000;
+  border-color: var(--muted);
+  color: var(--fg);
+  background: var(--accent);
 }
 
 .ai-explanation {
   margin-top: 20px;
   padding: 20px;
-  border: 1px solid #333;
-  text-transform: none;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 0.9em;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
   line-height: 1.7;
 }
 
@@ -503,5 +684,276 @@ button:hover:not(.explain-btn) {
 }
 
 .ai-explanation strong {
-  color: #ddd;
+  color: var(--fg);
+}
+
+#chatContainer {
+  margin-top: 40px;
+  display: none;
+  flex-direction: column;
+  width: 100%;
+  height: 500px;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#chatMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+
+#chatMessages::-webkit-scrollbar {
+  width: 4px;
+}
+
+#chatMessages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#chatMessages::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+#chatMessages::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+.chat-message {
+  max-width: 80%;
+  padding: 12px 16px;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.15em;
+  line-height: 1.6;
+  word-wrap: break-word;
+  border-radius: 12px;
+}
+
+.chat-user {
+  align-self: flex-end;
+  background: var(--fg);
+  color: var(--bg);
+  border: none;
+}
+
+.chat-assistant {
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--fg);
+  border: none;
+}
+
+.chat-assistant p {
+  margin: 0 0 0.6em 0;
+}
+
+.chat-assistant p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-assistant ul,
+.chat-assistant ol {
+  padding-left: 20px;
+  margin: 0.4em 0;
+}
+
+.chat-assistant strong {
+  color: var(--fg);
+}
+
+.chat-assistant code {
+  background: var(--accent);
+  padding: 2px 5px;
+  font-size: 0.9em;
+}
+
+.chat-typing {
+  color: var(--muted);
+  font-style: italic;
+}
+
+#chatForm {
+  display: flex;
+  border-top: 1px solid var(--accent);
+}
+
+#chatInput {
+  flex: 1;
+  background: var(--bg);
+  color: var(--fg);
+  border: none;
+  padding: 14px 16px;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
+  outline: none;
+}
+
+#chatInput::placeholder {
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  font-size: 1em;
+}
+
+#chatSendBtn {
+  background: var(--bg);
+  color: var(--fg);
+  border: none;
+  border-left: 2px solid var(--accent);
+  padding: 14px 24px;
+  cursor: pointer;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.1em;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  margin: 0;
+  border-radius: 0;
+}
+
+#chatSendBtn:hover {
+  background: var(--accent);
+}
+
+.settings-gear {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 1.4em;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.settings-gear:hover {
+  color: var(--fg);
+  border-color: var(--muted);
+  background: var(--accent);
+}
+
+.settings-panel {
+  position: fixed;
+  top: 72px;
+  right: 20px;
+  width: 280px;
+  background: var(--bg);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 0;
+  z-index: 100;
+  text-align: left;
+  overflow: hidden;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 2px solid var(--accent);
+  font-size: 1.1em;
+  letter-spacing: 1px;
+}
+
+.settings-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.3em;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  width: auto;
+  height: auto;
+  line-height: 1;
+}
+
+.settings-close:hover {
+  color: var(--fg);
+  background: transparent;
+}
+
+.settings-section {
+  padding: 18px;
+  border-bottom: 2px solid var(--accent);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+}
+
+.settings-label {
+  display: block;
+  font-size: 1em;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.color-scheme-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.color-swatch {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 0.9em;
+  letter-spacing: 0.5px;
+  text-align: center;
+  transition: all 0.2s ease;
+  margin: 0;
+  border-radius: 6px;
+}
+
+.color-swatch:hover {
+  opacity: 0.85;
+}
+
+.color-swatch.active {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.settings-select {
+  width: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.05em;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.settings-select:focus {
+  border-color: var(--fg);
+}
+
+.settings-select option {
+  background: var(--bg);
+  color: var(--fg);
 }

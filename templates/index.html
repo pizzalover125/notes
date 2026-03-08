@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>notes.</title>
+    <link
+      id="favicon"
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='2' fill='%23e8a735'/></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Patrick+Hand&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/static/style.css" />
     <link
       rel="stylesheet"
@@ -15,23 +27,71 @@
   </head>
   <body>
     <div id="loading">
-      <div class="spinner"></div>
-      <p>GENERATING...</p>
+      <div id="loadingDefault">
+        <div class="spinner"></div>
+        <p>generating...</p>
+        <p id="loadingTimer">0:00</p>
+        <button id="playSnakeBtn">play snake while you wait?</button>
+      </div>
+      <div id="snakeGame">
+        <div id="snakeHeader">
+          <p id="snakeScore">score: 0</p>
+          <p id="snakeTimer">0:00</p>
+        </div>
+        <canvas id="snakeCanvas" width="300" height="300"></canvas>
+        <button id="seeNotesBtn" style="display: none">see your notes</button>
+      </div>
     </div>
 
     <div class="container">
       <h1>notes.</h1>
+      <button id="settingsToggle" class="settings-gear" title="Settings">
+        &#9881;
+      </button>
+
+      <div id="settingsPanel" class="settings-panel" style="display: none">
+        <div class="settings-header">
+          <span>SETTINGS</span>
+          <button id="settingsClose" class="settings-close">&times;</button>
+        </div>
+        <div class="settings-section">
+          <label class="settings-label">COLOR SCHEME</label>
+          <div id="colorSchemeOptions" class="color-scheme-grid"></div>
+        </div>
+        <div class="settings-section">
+          <label class="settings-label">AI MODEL</label>
+          <select id="modelSelect" class="settings-select"></select>
+        </div>
+      </div>
 
       <form id="uploadForm">
-        <label for="pdfFile" class="custom-file-upload"> CHOOSE PDF </label>
-        <input type="file" id="pdfFile" name="file" accept=".pdf" required />
-        <button type="submit" id="generateBtn">GENERATE NOTES</button>
+        <div id="dropZone" class="drop-zone">
+          <svg
+            class="drop-zone-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <p class="drop-zone-text">drag & drop your PDF here</p>
+          <p class="drop-zone-hint">or click to browse</p>
+          <input type="file" id="pdfFile" name="file" accept=".pdf" required />
+        </div>
+        <button type="submit" id="generateBtn">GENERATE</button>
       </form>
 
       <div id="tabs" style="display: none">
         <button class="tab-btn active" data-tab="notes">NOTES</button>
         <button class="tab-btn" data-tab="flashcards">FLASHCARDS</button>
         <button class="tab-btn" data-tab="quiz">QUIZ</button>
+        <button class="tab-btn" data-tab="chat">CHAT</button>
       </div>
 
       <div id="results"></div>
@@ -43,17 +103,29 @@
           <span id="cardCounter"></span>
           <button id="nextCard">NEXT &#8594;</button>
         </div>
+        <button id="exportFlashcardsCsv" class="export-btn">
+          EXPORT AS CSV
+        </button>
       </div>
 
       <div id="quizContainer" style="display: none">
         <div id="quizScore">
           <span id="scoreText">SCORE: 0 / 0</span>
-          <button id="nextQuestion" style="display: none">NEXT QUESTION</button>
-          <button id="generateMoreQuiz" style="display: none">
-            GENERATE MORE QUESTIONS
-          </button>
         </div>
         <div id="quizQuestions"></div>
+      </div>
+
+      <div id="chatContainer" style="display: none">
+        <div id="chatMessages"></div>
+        <form id="chatForm">
+          <input
+            type="text"
+            id="chatInput"
+            placeholder="Ask a question about the topic..."
+            autocomplete="off"
+          />
+          <button type="submit" id="chatSendBtn">SEND</button>
+        </form>
       </div>
     </div>
     <script src="/static/script.js"></script>
