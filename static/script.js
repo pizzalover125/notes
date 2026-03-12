@@ -1,4 +1,4 @@
-let currentFile = null;
+let currentFiles = [];
 let flashcardsData = [];
 let currentCardIndex = 0;
 let quizData = [];
@@ -8,6 +8,7 @@ let questionAnswered = false;
 let chatHistory = [];
 let notesContent = "";
 let selectedModel = "google/gemini-3-flash-preview";
+const STUDY_STATE_KEY = "notesStudyState";
 
 const COLOR_SCHEMES = [
   {
@@ -164,6 +165,143 @@ initSettings();
 const dropZone = document.getElementById("dropZone");
 const pdfInput = document.getElementById("pdfFile");
 
+function updateDropZoneText(files) {
+  const text = dropZone.querySelector(".drop-zone-text");
+  if (!files.length) {
+    text.textContent = "drag & drop your PDFs here";
+    dropZone.classList.remove("has-file");
+    return;
+  }
+
+  if (files.length === 1) {
+    text.textContent = files[0].name;
+  } else {
+    text.textContent = `${files.length} PDFs selected`;
+  }
+  dropZone.classList.add("has-file");
+}
+
+function resetGeneratedContent() {
+  flashcardsData = [];
+  currentCardIndex = 0;
+  quizData = [];
+  quizScore = { correct: 0, total: 0 };
+  currentQuizIndex = 0;
+  questionAnswered = false;
+  chatHistory = [];
+  notesContent = "";
+  const chatMessages = document.getElementById("chatMessages");
+  if (chatMessages) chatMessages.innerHTML = "";
+}
+
+function showUploadForm() {
+  document.getElementById("uploadForm").style.display = "flex";
+  document.getElementById("studyActions").style.display = "none";
+  document.getElementById("tabs").style.display = "none";
+  document.getElementById("results").style.display = "none";
+  document.getElementById("flashcardsContainer").style.display = "none";
+  document.getElementById("quizContainer").style.display = "none";
+  document.getElementById("chatContainer").style.display = "none";
+}
+
+function showStudyWorkspace() {
+  document.getElementById("uploadForm").style.display = "none";
+  document.getElementById("studyActions").style.display = "flex";
+  document.getElementById("tabs").style.display = "flex";
+}
+
+function renderNotes() {
+  const resultsDiv = document.getElementById("results");
+  resultsDiv.innerHTML = marked.parse(notesContent || "");
+  renderMath(resultsDiv);
+}
+
+function renderChatHistory() {
+  const chatMessages = document.getElementById("chatMessages");
+  chatMessages.innerHTML = "";
+  chatHistory.forEach((msg) => {
+    const parseMarkdown = msg.role === "assistant";
+    const msgEl = appendChatMessage(msg.role, msg.content, parseMarkdown);
+    if (parseMarkdown) {
+      renderMath(msgEl);
+    }
+  });
+}
+
+function getActiveTab() {
+  return document.querySelector(".tab-btn.active")?.dataset.tab || "notes";
+}
+
+function persistStudyState() {
+  if (!notesContent && !flashcardsData.length && !quizData.length && !chatHistory.length) {
+    localStorage.removeItem(STUDY_STATE_KEY);
+    return;
+  }
+
+  const state = {
+    notesContent,
+    flashcardsData,
+    currentCardIndex,
+    quizData,
+    quizScore,
+    currentQuizIndex,
+    questionAnswered,
+    chatHistory,
+    activeTab: getActiveTab(),
+    fileNames: currentFiles.map((file) => file.name),
+  };
+
+  localStorage.setItem(STUDY_STATE_KEY, JSON.stringify(state));
+}
+
+function clearStudyState() {
+  localStorage.removeItem(STUDY_STATE_KEY);
+}
+
+function restoreStudyState() {
+  const rawState = localStorage.getItem(STUDY_STATE_KEY);
+  if (!rawState) {
+    showUploadForm();
+    return;
+  }
+
+  try {
+    const state = JSON.parse(rawState);
+    notesContent = state.notesContent || "";
+    flashcardsData = Array.isArray(state.flashcardsData) ? state.flashcardsData : [];
+    currentCardIndex = Number.isInteger(state.currentCardIndex) ? state.currentCardIndex : 0;
+    quizData = Array.isArray(state.quizData) ? state.quizData : [];
+    quizScore = state.quizScore || { correct: 0, total: 0 };
+    currentQuizIndex = Number.isInteger(state.currentQuizIndex) ? state.currentQuizIndex : 0;
+    questionAnswered = Boolean(state.questionAnswered);
+    chatHistory = Array.isArray(state.chatHistory) ? state.chatHistory : [];
+    currentFiles = [];
+
+    if (notesContent) {
+      renderNotes();
+    }
+    if (flashcardsData.length) {
+      currentCardIndex = Math.min(currentCardIndex, flashcardsData.length - 1);
+      renderFlashcard();
+    }
+    if (quizData.length) {
+      currentQuizIndex = Math.min(currentQuizIndex, quizData.length - 1);
+      renderCurrentQuestion();
+    } else {
+      updateScoreDisplay();
+    }
+    if (chatHistory.length) {
+      renderChatHistory();
+    }
+
+    showStudyWorkspace();
+    setActiveTab(state.activeTab || "notes");
+  } catch (error) {
+    clearStudyState();
+    showUploadForm();
+  }
+}
+
 dropZone.addEventListener("click", () => pdfInput.click());
 
 dropZone.addEventListener("dragover", (e) => {
@@ -178,20 +316,24 @@ dropZone.addEventListener("dragleave", () => {
 dropZone.addEventListener("drop", (e) => {
   e.preventDefault();
   dropZone.classList.remove("drag-over");
-  const file = e.dataTransfer.files[0];
-  if (file && file.type === "application/pdf") {
-    pdfInput.files = e.dataTransfer.files;
-    dropZone.querySelector(".drop-zone-text").textContent = file.name;
-    dropZone.classList.add("has-file");
+  const files = Array.from(e.dataTransfer.files).filter(
+    (file) => file.type === "application/pdf",
+  );
+
+  if (files.length) {
+    const dataTransfer = new DataTransfer();
+    files.forEach((file) => dataTransfer.items.add(file));
+    pdfInput.files = dataTransfer.files;
+    currentFiles = files;
+    updateDropZoneText(files);
+    resetGeneratedContent();
   }
 });
 
 pdfInput.addEventListener("change", () => {
-  if (pdfInput.files.length) {
-    dropZone.querySelector(".drop-zone-text").textContent =
-      pdfInput.files[0].name;
-    dropZone.classList.add("has-file");
-  }
+  currentFiles = Array.from(pdfInput.files);
+  updateDropZoneText(currentFiles);
+  resetGeneratedContent();
 });
 
 function renderMath(el) {
@@ -220,18 +362,19 @@ document
     showLoadingScreen();
     document.getElementById("generateBtn").disabled = true;
 
-    const fileInput = document.getElementById("pdfFile");
-    const file = fileInput.files[0];
+    const files = Array.from(document.getElementById("pdfFile").files).filter(
+      (file) => file.type === "application/pdf",
+    );
 
-    if (!file) {
-      alert("Please select a PDF file.");
+    if (!files.length) {
+      alert("Please select at least one PDF file.");
       return;
     }
 
-    currentFile = file;
+    currentFiles = files;
 
     const formData = new FormData();
-    formData.append("file", file);
+    currentFiles.forEach((file) => formData.append("file", file));
     formData.append("model", selectedModel);
 
     try {
@@ -246,11 +389,8 @@ document
         alert(data.error);
       } else {
         if (data.notes) {
-          const resultsDiv = document.getElementById("results");
-          resultsDiv.innerHTML = marked.parse(data.notes);
-          renderMath(resultsDiv);
-          resultsDiv.style.display = "block";
           notesContent = data.notes;
+          renderNotes();
         }
 
         if (data.flashcards) {
@@ -267,9 +407,9 @@ document
           renderCurrentQuestion();
         }
 
-        document.getElementById("tabs").style.display = "flex";
-        document.getElementById("uploadForm").style.display = "none";
+        showStudyWorkspace();
         setActiveTab("notes");
+        persistStudyState();
       }
     } catch (error) {
       console.error("Error:", error);
@@ -314,16 +454,18 @@ function setActiveTab(tab) {
     document.getElementById("chatContainer").style.display = "flex";
     document.getElementById("chatInput").focus();
   }
+
+  persistStudyState();
 }
 
 async function loadFlashcards() {
-  if (!currentFile) return;
+  if (!currentFiles.length) return;
 
   document.getElementById("flashcardsContainer").style.display = "none";
   showLoadingScreen();
 
   const formData = new FormData();
-  formData.append("file", currentFile);
+  currentFiles.forEach((file) => formData.append("file", file));
   formData.append("model", selectedModel);
 
   try {
@@ -341,6 +483,7 @@ async function loadFlashcards() {
       currentCardIndex = 0;
       renderFlashcard();
       document.getElementById("flashcardsContainer").style.display = "block";
+      persistStudyState();
     }
   } catch (error) {
     console.error("Error:", error);
@@ -384,6 +527,7 @@ document.getElementById("prevCard").addEventListener("click", () => {
   if (currentCardIndex > 0) {
     currentCardIndex--;
     renderFlashcard();
+    persistStudyState();
   }
 });
 
@@ -391,41 +535,18 @@ document.getElementById("nextCard").addEventListener("click", () => {
   if (currentCardIndex < flashcardsData.length - 1) {
     currentCardIndex++;
     renderFlashcard();
+    persistStudyState();
   }
 });
 
-const inputElement = document.getElementById("pdfFile");
-if (inputElement) {
-  inputElement.addEventListener("change", function () {
-    const label = document.querySelector("label.custom-file-upload");
-    if (this.files && this.files.length > 0) {
-      label.textContent = this.files[0].name.toUpperCase();
-    } else {
-      label.textContent = "CHOOSE PDF";
-    }
-    flashcardsData = [];
-    currentCardIndex = 0;
-    quizData = [];
-    quizScore = { correct: 0, total: 0 };
-    currentQuizIndex = 0;
-    questionAnswered = false;
-    chatHistory = [];
-    notesContent = "";
-    const chatMessages = document.getElementById("chatMessages");
-    if (chatMessages) chatMessages.innerHTML = "";
-  });
-} else {
-  console.error("File input element not found");
-}
-
 async function loadQuiz() {
-  if (!currentFile) return;
+  if (!currentFiles.length) return;
 
   document.getElementById("quizContainer").style.display = "none";
   showLoadingScreen();
 
   const formData = new FormData();
-  formData.append("file", currentFile);
+  currentFiles.forEach((file) => formData.append("file", file));
   formData.append("model", selectedModel);
 
   try {
@@ -442,8 +563,10 @@ async function loadQuiz() {
       quizData = data.quiz;
       currentQuizIndex = 0;
       questionAnswered = false;
+      quizScore = { correct: 0, total: 0 };
       renderCurrentQuestion();
       document.getElementById("quizContainer").style.display = "block";
+      persistStudyState();
     }
   } catch (error) {
     console.error("Error:", error);
@@ -494,6 +617,7 @@ function renderCurrentQuestion() {
   });
 
   updateScoreDisplay();
+  persistStudyState();
 }
 
 function handleAnswer(selectedOpt, question) {
@@ -503,6 +627,8 @@ function handleAnswer(selectedOpt, question) {
   const chosenLetter = selectedOpt.dataset.letter;
   const correctAnswer = question.answer.trim().charAt(0).toUpperCase();
   const isCorrect = chosenLetter === correctAnswer;
+  question.chosen = chosenLetter;
+  question.isCorrect = isCorrect;
 
   quizScore.total++;
   if (isCorrect) quizScore.correct++;
@@ -544,6 +670,7 @@ function handleAnswer(selectedOpt, question) {
     nextBtn.addEventListener("click", () => {
       currentQuizIndex++;
       renderCurrentQuestion();
+      persistStudyState();
     });
     quizActions.appendChild(nextBtn);
   } else {
@@ -560,6 +687,7 @@ function handleAnswer(selectedOpt, question) {
   }
 
   selectedOpt.closest(".quiz-question").appendChild(quizActions);
+  persistStudyState();
 }
 
 function updateScoreDisplay() {
@@ -598,6 +726,8 @@ async function explainQuestion(question, chosen, btn) {
     explanationDiv.innerHTML = marked.parse(data.explanation);
     btn.parentElement.appendChild(explanationDiv);
     renderMath(explanationDiv);
+    question.explanation = data.explanation;
+    persistStudyState();
     btn.remove();
   } catch (error) {
     console.error("Error:", error);
@@ -619,6 +749,7 @@ document
     input.value = "";
     appendChatMessage("user", message);
     chatHistory.push({ role: "user", content: message });
+    persistStudyState();
 
     const typingEl = appendChatMessage("assistant", "...");
     typingEl.classList.add("chat-typing");
@@ -647,6 +778,7 @@ document
         const replyEl = appendChatMessage("assistant", data.reply, true);
         chatHistory.push({ role: "assistant", content: data.reply });
         renderMath(replyEl);
+        persistStudyState();
       }
     } catch (error) {
       typingEl.remove();
@@ -945,3 +1077,18 @@ document.getElementById("exportFlashcardsCsv").addEventListener("click", () => {
   link.click();
   URL.revokeObjectURL(link.href);
 });
+
+document.getElementById("abandonBtn").addEventListener("click", () => {
+  clearStudyState();
+  currentFiles = [];
+  resetGeneratedContent();
+  pdfInput.value = "";
+  updateDropZoneText([]);
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("flashcardDeck").innerHTML = "";
+  document.getElementById("quizQuestions").innerHTML = "";
+  document.getElementById("scoreText").textContent = "SCORE: 0 / 0";
+  showUploadForm();
+});
+
+restoreStudyState();

@@ -29,90 +29,89 @@ def get_models():
     return jsonify({'models': AVAILABLE_MODELS, 'default': DEFAULT_MODEL})
 
 def get_model_from_request():
-    """Extract model from form data or JSON body, falling back to default."""
     model = request.form.get('model') or DEFAULT_MODEL
     if not any(m['id'] == model for m in AVAILABLE_MODELS):
         model = DEFAULT_MODEL
     return model
 
+def _get_uploaded_pdfs():
+    files = [file for file in request.files.getlist('file') if file and file.filename]
+    if not files:
+        return None, ('No selected file', 400)
+
+    invalid = [file.filename for file in files if not file.filename.lower().endswith('.pdf')]
+    if invalid:
+        return None, ('Invalid file type. Please upload PDF files only.', 400)
+
+    pdf_files = []
+    for file in files:
+        encoded = base64.b64encode(file.read()).decode()
+        pdf_files.append({
+            'filename': file.filename,
+            'file_data': f"data:application/pdf;base64,{encoded}",
+        })
+
+    return pdf_files, None
+
+def _build_file_content(prompt, pdf_files):
+    content = [{"type": "text", "text": prompt}]
+    for pdf in pdf_files:
+        content.append({
+            "type": "file",
+            "file": {
+                "filename": pdf["filename"],
+                "file_data": pdf["file_data"],
+            }
+        })
+    return content
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
-    
-    file = request.files['file']
-    
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    
-    if file and file.filename.endswith('.pdf'):
-        try:
-            model = get_model_from_request()
-            pdf_base64 = f"data:application/pdf;base64,{base64.b64encode(file.read()).decode()}"
+    pdf_files, error = _get_uploaded_pdfs()
+    if error:
+        return jsonify({'error': error[0]}), error[1]
 
-            headers = {
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json",
-            }
-            
-            data = {
-                "model": model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": (
-                                    "You are now my personal AI note-taking assistant for lectures. "
-                                    "Your task is to help me create clear, concise, and well-organized notes based on the attached PDF. "
-                                    "Organize the content into a logical structure with main topics and subtopics. "
-                                    "Use bullet points, numbering, and indentation to improve readability. "
-                                    "Highlight key concepts, definitions, and important facts in bold. "
-                                    "Create mnemonics or memory aids for difficult-to-remember information. "
-                                    "Identify any formulas, equations, or statistical data, and format them clearly. "
-                                    "Please format the notes in visually appealing Markdown, using appropriate headings, subheadings, and spacing. "
-                                    "Do not include any other information or explanations, just the notes in Markdown format."
-                                ),
-                            },
-                            {
-                                "type": "file",
-                                "file": {
-                                    "filename": file.filename,
-                                    "file_data": pdf_base64
-                                }
-                            }
-                        ],
-                    }
-                ],
-                "plugins": [
-                    {
-                        "id": "file-parser",
-                        "pdf": {"engine": "native"}
-                    }
-                ],
-            }
-            
-            response = requests.post(API_URL, headers=headers, json=data)
-            response.raise_for_status()
-            
-            notes = response.json()["choices"][0]["message"]["content"]
-            notes = _strip_think_tags(notes)
-            notes = _strip_markdown_fences(notes)
-            
-            return jsonify({'notes': notes})
-            
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-            
-    return jsonify({'error': 'Invalid file type. Please upload a PDF.'}), 400
+    try:
+        model = get_model_from_request()
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        data = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": _build_file_content(NOTES_PROMPT, pdf_files),
+                }
+            ],
+            "plugins": [
+                {
+                    "id": "file-parser",
+                    "pdf": {"engine": "native"}
+                }
+            ],
+        }
+
+        response = requests.post(API_URL, headers=headers, json=data)
+        response.raise_for_status()
+
+        notes = response.json()["choices"][0]["message"]["content"]
+        notes = _strip_think_tags(notes)
+        notes = _strip_markdown_fences(notes)
+
+        return jsonify({'notes': notes})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 def _strip_think_tags(text):
-    """Remove <think>...</think> blocks from reasoning model output."""
     return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
 
 def _strip_markdown_fences(text):
-    """Remove wrapping code fences (```markdown ... ```) from AI output."""
     text = text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1] if "\n" in text else text[3:]
@@ -120,17 +119,13 @@ def _strip_markdown_fences(text):
         text = text.rstrip()[:-3]
     return text.strip()
 
-def _call_ai(headers, model, pdf_base64, filename, prompt):
-    """Helper to make one AI API call."""
+def _call_ai(headers, model, pdf_files, prompt):
     data = {
         "model": model,
         "messages": [
             {
                 "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "file", "file": {"filename": filename, "file_data": pdf_base64}},
-                ],
+                "content": _build_file_content(prompt, pdf_files),
             }
         ],
         "plugins": [{"id": "file-parser", "pdf": {"engine": "native"}}],
@@ -142,7 +137,6 @@ def _call_ai(headers, model, pdf_base64, filename, prompt):
     return content
 
 def _parse_json_response(raw):
-    """Strip markdown fences and parse JSON."""
     cleaned = raw.strip()
     if cleaned.startswith("```"):
         cleaned = cleaned.split("\n", 1)[1]
@@ -189,17 +183,12 @@ QUIZ_PROMPT = (
 def generate_all():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    if not (file and file.filename.endswith('.pdf')):
-        return jsonify({'error': 'Invalid file type. Please upload a PDF.'}), 400
+    pdf_files, error = _get_uploaded_pdfs()
+    if error:
+        return jsonify({'error': error[0]}), error[1]
 
     try:
         model = get_model_from_request()
-        pdf_base64 = f"data:application/pdf;base64,{base64.b64encode(file.read()).decode()}"
         headers = {
             "Authorization": f"Bearer {API_KEY}",
             "Content-Type": "application/json",
@@ -210,9 +199,9 @@ def generate_all():
 
         with ThreadPoolExecutor(max_workers=3) as executor:
             futures = {
-                executor.submit(_call_ai, headers, model, pdf_base64, file.filename, NOTES_PROMPT): "notes",
-                executor.submit(_call_ai, headers, model, pdf_base64, file.filename, FLASHCARDS_PROMPT): "flashcards",
-                executor.submit(_call_ai, headers, model, pdf_base64, file.filename, QUIZ_PROMPT): "quiz",
+                executor.submit(_call_ai, headers, model, pdf_files, NOTES_PROMPT): "notes",
+                executor.submit(_call_ai, headers, model, pdf_files, FLASHCARDS_PROMPT): "flashcards",
+                executor.submit(_call_ai, headers, model, pdf_files, QUIZ_PROMPT): "quiz",
             }
 
             for future in as_completed(futures):
@@ -244,152 +233,95 @@ def generate_all():
 def generate_flashcards():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
+    pdf_files, error = _get_uploaded_pdfs()
+    if error:
+        return jsonify({'error': error[0]}), error[1]
 
-    file = request.files['file']
+    try:
+        model = get_model_from_request()
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
 
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    
-    if file and file.filename.endswith('.pdf'):
-        try:
-            model = get_model_from_request()
-            pdf_base64 = f"data:application/pdf;base64,{base64.b64encode(file.read()).decode()}"
+        data = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": _build_file_content(FLASHCARDS_PROMPT, pdf_files),
+                }
+            ],
+            "plugins": [
+                {
+                    "id": "file-parser",
+                    "pdf": {"engine": "native"}
+                }
+            ],
+        }
 
-            headers = {
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json",
-            }
+        response = requests.post(API_URL, headers=headers, json=data)
+        response.raise_for_status()
 
-            data = {
-                "model": model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": (
-                                    "You are a flashcard generator. Based on the attached PDF, "
-                                    "create a set of flashcards for studying. Each flashcard should have a "
-                                    "question on the front and a concise answer on the back. "
-                                    "Cover all key concepts, definitions, formulas, and important facts. "
-                                    "Return ONLY a valid JSON array with no other text, no markdown fences, no explanation. "
-                                    "Each element must have \"front\" and \"back\" keys. "
-                                    "Example: [{\"front\": \"What is X?\", \"back\": \"X is ...\"}, ...] "
-                                ),
-                            },
-                            {
-                                "type": "file",
-                                "file": {
-                                    "filename": file.filename,
-                                    "file_data": pdf_base64
-                                }
-                            }
-                        ],
-                    }
-                ],
-                "plugins": [
-                    {
-                        "id": "file-parser",
-                        "pdf": {"engine": "native"}
-                    }
-                ],
-            }
+        raw = response.json()["choices"][0]["message"]["content"]
+        raw = _strip_think_tags(raw)
+        flashcards = _parse_json_response(raw)
 
-            response = requests.post(API_URL, headers=headers, json=data)
-            response.raise_for_status()
+        return jsonify({'flashcards': flashcards})
 
-            raw = response.json()["choices"][0]["message"]["content"]
-            raw = _strip_think_tags(raw)
-            flashcards = _parse_json_response(raw)
-
-            return jsonify({'flashcards': flashcards})
-
-        except json.JSONDecodeError:
-            return jsonify({'error': 'Failed to parse flashcards from AI response.'}), 500
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-
-    return jsonify({'error': 'Invalid file type. Please upload a PDF.'}), 400
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Failed to parse flashcards from AI response.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/quiz', methods=['POST'])
 def generate_quiz():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
+    pdf_files, error = _get_uploaded_pdfs()
+    if error:
+        return jsonify({'error': error[0]}), error[1]
 
-    file = request.files['file']
+    try:
+        model = get_model_from_request()
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
 
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+        data = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": _build_file_content(QUIZ_PROMPT, pdf_files),
+                }
+            ],
+            "plugins": [
+                {
+                    "id": "file-parser",
+                    "pdf": {"engine": "native"}
+                }
+            ],
+        }
 
-    if file and file.filename.endswith('.pdf'):
-        try:
-            model = get_model_from_request()
-            pdf_base64 = f"data:application/pdf;base64,{base64.b64encode(file.read()).decode()}"
+        response = requests.post(API_URL, headers=headers, json=data)
+        response.raise_for_status()
 
-            headers = {
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json",
-            }
+        raw = response.json()["choices"][0]["message"]["content"]
+        raw = _strip_think_tags(raw)
+        quiz = _parse_json_response(raw)
 
-            data = {
-                "model": model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": (
-                                    "You are a quiz generator. Based on the attached PDF, "
-                                    "create exactly 10 multiple choice questions to test understanding. "
-                                    "Each question must have exactly 4 answer options labeled A, B, C, D. "
-                                    "Only one option should be correct. "
-                                    "Return ONLY a valid JSON array with no other text, no markdown fences, no explanation. "
-                                    "Each element must have: "
-                                    '"question" (string), '
-                                    '"options" (object with keys "A", "B", "C", "D"), '
-                                    '"answer" (string, the correct letter e.g. "A"). '
-                                    'Example: [{"question": "What is X?", "options": {"A": "...", "B": "...", "C": "...", "D": "..."}, "answer": "B"}]'
-                                ),
-                            },
-                            {
-                                "type": "file",
-                                "file": {
-                                    "filename": file.filename,
-                                    "file_data": pdf_base64
-                                }
-                            }
-                        ],
-                    }
-                ],
-                "plugins": [
-                    {
-                        "id": "file-parser",
-                        "pdf": {"engine": "native"}
-                    }
-                ],
-            }
+        for q in quiz:
+            q['options'] = {k: v for k, v in q.get('options', {}).items() if k in ('A', 'B', 'C', 'D')}
+            q['answer'] = q.get('answer', '').strip()[:1].upper()
 
-            response = requests.post(API_URL, headers=headers, json=data)
-            response.raise_for_status()
+        return jsonify({'quiz': quiz})
 
-            raw = response.json()["choices"][0]["message"]["content"]
-            raw = _strip_think_tags(raw)
-            quiz = _parse_json_response(raw)
-
-            for q in quiz:
-                q['options'] = {k: v for k, v in q.get('options', {}).items() if k in ('A', 'B', 'C', 'D')}
-                q['answer'] = q.get('answer', '').strip()[:1].upper()
-
-            return jsonify({'quiz': quiz})
-
-        except json.JSONDecodeError:
-            return jsonify({'error': 'Failed to parse quiz from AI response.'}), 500
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-
-    return jsonify({'error': 'Invalid file type. Please upload a PDF.'}), 400
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Failed to parse quiz from AI response.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/chat', methods=['POST'])
 def chat():
